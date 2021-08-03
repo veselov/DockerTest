@@ -19,6 +19,9 @@ import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -104,10 +107,13 @@ public class App {
                     .withAttachStdin(true)
                     .exec();
 
-            // !!!!! Use inFile to see the problem, or new MyStream()
-            // with which everything is OK.
-            InputStream inFile = new GzipCompressorInputStream(Import.class.getResourceAsStream("/wtf.txt.gz"));
+            // !!!!! Pick your inFile to see the problem
+            // cuts off at 98,304
+            // InputStream inFile = new GzipCompressorInputStream(Import.class.getResourceAsStream("/wtf.txt.gz"));
+            // doesn't cut off
             // InputStream inFile = new MyStream();
+            // cuts off at random values around 450,000
+            InputStream inFile = fullStream();
 
             AnyResultCallBack<Frame> cb = docker
                     .execStartCmd(execCmd.getId())
@@ -141,6 +147,20 @@ public class App {
 
         }
 
+
+    }
+
+    static InputStream fullStream() throws IOException {
+
+        MyStream ms = new MyStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        while (true) {
+            int r = ms.read();
+            if (r < 0) { break; }
+            out.write(r);
+        }
+
+        return new ByteArrayInputStream(out.toByteArray());
 
     }
 
@@ -222,6 +242,5 @@ public class App {
         protected abstract void handle(T object);
 
     }
-
 
 }
