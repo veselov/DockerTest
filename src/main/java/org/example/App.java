@@ -25,6 +25,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -108,12 +109,14 @@ public class App {
                     .exec();
 
             // !!!!! Pick your inFile to see the problem
-            // cuts off at 98,304
-            // InputStream inFile = new GzipCompressorInputStream(Import.class.getResourceAsStream("/wtf.txt.gz"));
+            // cuts off at 98,304, should be 3,188,018
+            InputStream inFile = new GzipCompressorInputStream(Import.class.getResourceAsStream("/wtf.txt.gz"));
             // doesn't cut off
             // InputStream inFile = new MyStream();
-            // cuts off at random values around 450,000
-            InputStream inFile = fullStream();
+            // cuts off at random values around 450,000, should be 1,000,000 lines
+            // InputStream inFile = fullStream();
+            // works because the buffer is forcefully metered
+            // InputStream inFile = new MeteredBufferedStream(new GzipCompressorInputStream(Import.class.getResourceAsStream("/wtf.txt.gz")), 14);
 
             AnyResultCallBack<Frame> cb = docker
                     .execStartCmd(execCmd.getId())
@@ -243,4 +246,26 @@ public class App {
 
     }
 
+    private static class MeteredBufferedStream extends FilterInputStream {
+
+        private final int bufSize;
+
+        public MeteredBufferedStream(InputStream src, int bufSize) {
+            super(src);
+            this.bufSize = bufSize;
+        }
+
+        @Override
+        public int read(byte[] b) throws IOException {
+            return read(b, 0, b.length);
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+
+            len = Math.min(len, bufSize);
+            return super.read(b, off, bufSize);
+
+        }
+    }
 }
