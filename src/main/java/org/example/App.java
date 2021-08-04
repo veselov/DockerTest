@@ -264,7 +264,7 @@ public class App {
         public int read(byte[] b, int off, int len) throws IOException {
 
             len = Math.min(len, bufSize);
-            return super.read(b, off, bufSize);
+            return super.read(b, off, len);
 
         }
     }
